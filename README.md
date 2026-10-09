@@ -1,5 +1,7 @@
 # 麦门大富翁 · 命运汉堡堡 🎲🍔
 
+> 🕹️ **立即试玩 → <https://billcx330.github.io/mcd-roguelike-order/>** （GitHub Pages 在线版，打开就能玩，无需安装）
+
 ## 📖 项目介绍
 
 **基于麦当劳官方 MCP 实时数据的游戏化点餐 Skill，把「今天吃什么」变成一局肉鸽冒险。**
