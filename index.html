@@ -678,15 +678,55 @@ function launchGame(preferences) {
   addActions(bubble, [{ label: "🎲 投掷骰子", run: roll, kind: "primary" }]);
 }
 
+function cnNum(n) {
+  const names = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
+  return n <= 10 ? names[n] : String(n);
+}
+
+function padName(text, width) {
+  let w = 0;
+  for (const ch of text) w += ch.charCodeAt(0) > 255 ? 2 : 1;
+  return text + " ".repeat(Math.max(1, width - w));
+}
+
+function addArtBlock(bubble, text, kind) {
+  const figure = document.createElement("figure");
+  figure.className = "reply-illustration art-" + (kind || "route");
+  figure.setAttribute("role", "img");
+  figure.setAttribute("aria-label", "回复小画面");
+  const pre = document.createElement("pre");
+  pre.className = "text-art";
+  pre.textContent = text;
+  figure.append(pre);
+  bubble.append(figure);
+  scrollToLatest();
+  return figure;
+}
+
+function routeMapText() {
+  const rows = [];
+  state.route.forEach((room, i) => {
+    const current = i === state.roomIndex - 1;
+    const done = i < state.roomIndex - 1;
+    const name = done || current ? ROOM_NAMES[room] : "????";
+    const icon = current ? "▶" : "◇";
+    const mark = done ? "✓ done" : (current ? "← 你在这" : "");
+    rows.push(icon + " " + padName(name, 16) + mark);
+  });
+  rows.push("◇ " + padName("终局锻造", 16) + (state.roomIndex >= state.route.length ? "← 下一站" : ""));
+  return rows.join("\n");
+}
+
 function roll() {
   if (state.stage !== "running") return;
   if (state.roomIndex >= state.route.length) return showForge();
   addUser("🎲 投掷骰子");
   const die = 1 + Math.floor(Math.random() * 6);
   state.steps += die;
-  const room = state.route[state.roomIndex++];
+  const room = state.route[state.roomIndex];
+  state.roomIndex += 1;
   const diceLine = pickFrom("dice", DICE_LINES).replace("{die}", die);
-  const bubble = addAssistant("🎲 " + diceLine + "向前推进 " + die + " 格，本局累计 " + state.steps + " 格。\n" + pickRoomLine(room) + "你踩中了「" + ROOM_NAMES[room] + "」！", room);
+  const bubble = addAssistant("🎲 " + diceLine + "\n🏪 第" + cnNum(state.roomIndex) + "站：" + ROOM_NAMES[room], room);
   if (room === "coupon") resolveCoupon(bubble);
   else if (room === "nutrition") resolveNutrition(bubble);
   else if (room === "incident") resolveIncident(bubble);
@@ -708,11 +748,13 @@ function resolveCoupon(bubble) {
   if (bundle.coupons) {
     state.couponsClaimed = true;
     state.loot.push(bundle.loot);
-    addText(bubble, bundle.text, "message-text");
+    addText(bubble, bundle.text + "\n（免费券为无成本操作，已按开局约定自动领取；券码等敏感信息一律不在对话中展示。）", "message-text");
+    addArtBlock(bubble, routeMapText());
   } else {
     state.hp = Math.min(100, state.hp + 5);
     state.loot.push(bundle.loot);
     addText(bubble, bundle.text + "\n当前 HP " + state.hp + "/100。", "message-text");
+    addArtBlock(bubble, routeMapText());
   }
   continueActions(bubble);
 }
@@ -743,11 +785,13 @@ function resolveNutrition(bubble) {
     fat: main.fat + side.fat + DEMO.drink.fat,
     carb: main.carb + side.carb + DEMO.drink.carb
   };
-  const lines = [
-    "🍔 食材密室的烤箱门自己开了：" + main.name + "、" + side.name + " 和一杯零度可乐组成每人一份的补给。",
-    "🍔 掉落播报：「" + main.name + "」和「" + side.name + "」落入背包，附赠零度可乐一杯，正好" + person + " 人份。"
-  ];
-  addText(bubble, pickFrom("nutrition", lines) + "\nHP +" + gain + "，当前 " + state.hp + "/100；血条回血，营养面板也跟着刷新。\n每人约 " + nutrition.kcal + " kcal｜蛋白质 " + nutrition.protein + "g｜脂肪 " + nutrition.fat + "g｜碳水 " + nutrition.carb + "g\n" + person + " 人合计约 " + (nutrition.kcal * person) + " kcal。饥饿告警从红色降成橙色。", "message-text");
+  addText(bubble, "🍔 冷柜门吱呀打开，货架翻页停在今晚这一版 —— 价格与营养均为门店实时数据，" + person + " 人份掉落如下：", "message-text");
+  addArtBlock(bubble, routeMapText()
+    + "\n\n· " + padName(main.name, 18) + "¥" + main.price.toFixed(1) + " ｜ " + main.kcal + " kcal ｜ 蛋白" + main.protein + "g ｜ 脂肪" + main.fat + "g ｜ 碳水" + main.carb + "g"
+    + "\n· " + padName(side.name, 18) + "¥" + side.price.toFixed(1) + " ｜ " + side.kcal + " kcal ｜ 蛋白" + side.protein + "g ｜ 脂肪" + side.fat + "g ｜ 碳水" + side.carb + "g"
+    + "\n· " + padName(DEMO.drink.name, 18) + "¥" + DEMO.drink.price.toFixed(1) + " ｜ 0 kcal"
+    + "\n" + padName("合计（每人）", 20) + nutrition.kcal + " kcal ｜ 蛋白" + nutrition.protein + "g ｜ 脂肪" + nutrition.fat + "g ｜ 碳水" + nutrition.carb + "g"
+    + "\nHP +" + gain + " → " + state.hp + "/100（游戏数值，营养为真实数据）");
   continueActions(bubble);
 }
 
@@ -755,7 +799,8 @@ function resolveIncident(bubble) {
   const event = pickFrom("incident", INCIDENTS);
   state.hp = Math.min(100, state.hp + event.hp);
   state.loot.push("程序员事件增益");
-  addText(bubble, "🧑‍💻 " + event.title + "\n" + event.text + "\nHP +" + event.hp + "，现在 " + state.hp + "/100。这个增益只改本局状态，提交前无需 code review。", "message-text");
+  addText(bubble, "🧑‍💻 " + event.title + "\n" + event.text + "\n触发消耗：无 → HP +" + event.hp + "（" + state.hp + "/100）\n背包：" + (state.loot.join(" · ") || "空"), "message-text");
+  addArtBlock(bubble, routeMapText());
   continueActions(bubble);
 }
 
@@ -764,6 +809,7 @@ function resolveCampaign(bubble) {
   state.hp = Math.min(100, state.hp + event.hp);
   state.loot.push(event.loot);
   addText(bubble, event.text + "\n当前 HP " + state.hp + "/100。", "message-text");
+  addArtBlock(bubble, routeMapText());
   continueActions(bubble);
 }
 
@@ -772,15 +818,26 @@ function resolveSecret(bubble) {
   state.hp = Math.min(100, state.hp + event.hp);
   state.loot.push(event.loot);
   addText(bubble, event.text + "\n当前 HP " + state.hp + "/100。", "message-text");
+  addArtBlock(bubble, routeMapText());
   continueActions(bubble);
+}
+
+function lotteryPanelText() {
+  return padName("真实成本面板（服务端判定）", 26)
+    + "\n· " + padName("单次消耗", 18) + "50 积分"
+    + "\n· " + padName("当前可用积分", 18) + state.points
+    + "\n· " + padName("本次实际消耗", 18) + "50 积分（消耗积分抽奖，无次数兜底）"
+    + "\n· " + padName("资源是否满足", 18) + "✓ 满足"
+    + "\n公开奖品池（示例）：" + LOTTERY_PRIZE + " / 汉堡立减券 / 积分 / 谢谢参与";
 }
 
 function resolveLottery(bubble) {
   state.stage = "lottery";
-  addText(bubble, "🎡 积分抽奖站亮起金色灯牌，本局展示奖品是「" + LOTTERY_PRIZE + "」（示例数据）。虚拟转盘不扣积分，按游戏内随机结果运行；想试积分抽奖的话，这次会花 50 点，余额将从 " + state.points + " 变成 " + Math.max(0, state.points - 50) + "。你也可以直接跳过，把积分带去终局。", "message-text");
+  addText(bubble, "🎡 走廊尽头亮着一台老虎机风格的转盘，霓虹灯管噼啪作响：「麦麦积分抽奖」状态：进行中。\n⚠️ 官方未提供中奖概率，所以本游戏的任何“模拟概率”纯属虚构，不代表真实中奖率。\n请选：\n1. 虚拟抽奖 —— 只在剧情里转一次盘，不扣任何积分\n2. 真实抽奖 —— 会实际扣掉 50 积分（" + state.points + " → " + Math.max(0, state.points - 50) + "），需你明确说“确认真实抽奖”才动手\n3. 跳过 —— 不赌，直接前进\nHP " + state.hp + " ｜ 背包：" + (state.loot.join(" · ") || "空"), "message-text");
+  addArtBlock(bubble, routeMapText() + "\n\n" + lotteryPanelText());
   addActions(bubble, [
-    { label: "玩虚拟转盘（不扣分）", run: playVirtualLottery },
-    { label: "积分抽奖 · 扣50点", run: playPointLottery, kind: "primary" },
+    { label: "虚拟抽奖（不扣分）", run: playVirtualLottery },
+    { label: "确认真实抽奖 · 扣50点", run: playPointLottery, kind: "primary" },
     { label: "跳过", run: skipLottery, kind: "quiet" }
   ]);
 }
@@ -793,24 +850,27 @@ function finishLottery(text, kind) {
 
 function playVirtualLottery() {
   if (state.stage !== "lottery") return;
-  addUser("玩虚拟转盘");
+  addUser("虚拟抽奖");
   const wins = Math.random() < 0.3;
   const result = wins ? pickFrom("virtual-win", VIRTUAL_WINS) : pickFrom("virtual-lose", VIRTUAL_CONSOLATIONS);
-  finishLottery("✨ 虚拟转盘咕噜咕噜转了三圈——" + result + " 这只是游戏里的随机结局，不套用官方中奖概率，也不消耗你的积分。", "lottery");
+  finishLottery("✨ 转盘“咔——咔——咔”转了三圈——" + result + "\n虚拟结果（游戏内随机）：不消耗积分，不写入任何账户，不套用官方概率。", "lottery");
 }
 
 function playPointLottery() {
   if (state.stage !== "lottery") return;
-  addUser("积分抽奖 · 扣50点");
+  addUser("确认真实抽奖 · 扣50点");
   const cost = 50;
   state.points -= cost;
   const won = Math.random() < 0.55;
   state.drinkVoucher = won;
   if (won) state.loot.push(LOTTERY_PRIZE);
-  const result = won
-    ? "🎉 金光从转盘缝里喷出来！抽中「" + LOTTERY_PRIZE + " ×1」（示例数据），已放进本局背包，终局账单会用上它。"
-    : "转盘停在空格，奖池给你留下一声很有礼貌的“下次一定”。";
-  finishLottery(result + "\n本局积分：" + (state.points + cost) + " → " + state.points + "（-" + cost + "）。", "lottery");
+  const head = won
+    ? "🎉 转盘“咔——咔——咔”转了三圈，指针掠过每一格奖品，最后停在「" + LOTTERY_PRIZE + "」！"
+    : "🎡 转盘“咔——咔——咔”转了三圈，指针掠过每一格奖品，最后停在了空白格。";
+  const detail = won
+    ? "真实结果（原样呈现）：中奖「" + LOTTERY_PRIZE + "」 · 本次消耗 " + cost + " 积分 · 抽奖后剩余 " + state.points + " 积分"
+    : "真实结果（原样呈现）：未中奖 · 本次消耗 " + cost + " 积分 · 抽奖后剩余 " + state.points + " 积分\n（很诚实地说，这一下转盘只帮你消耗了积分，什么也没带回来。）";
+  finishLottery(head + "\n" + detail, "lottery");
 }
 
 function skipLottery() {
@@ -819,10 +879,8 @@ function skipLottery() {
   finishLottery("你把积分袋口扎紧，绕过转盘继续走。余额仍是 " + state.points + " 点；谨慎构筑也是一种稀有流派。", "lottery");
 }
 
-function buildPrice() {
+function planFrom(name, tagline, burger, side) {
   const people = state.preferences.people;
-  const burger = selectedBurger();
-  const side = selectedSide();
   const burgerSubtotal = burger.price * people;
   const sideSubtotal = side.price * people;
   const drinkSubtotal = DEMO.drink.price * people;
@@ -832,14 +890,26 @@ function buildPrice() {
   const sideDiscount = state.couponsClaimed && side === DEMO.chickenSide ? side.price / 2 : 0;
   const drinkDiscount = state.drinkVoucher ? DEMO.drink.price : 0;
   const deliveryDiscount = state.couponsClaimed && foodSubtotal >= 59 ? delivery : 0;
-  const total = foodSubtotal + delivery - burgerDiscount - sideDiscount - drinkDiscount - deliveryDiscount;
+  const discountTotal = burgerDiscount + sideDiscount + drinkDiscount + deliveryDiscount;
+  const total = foodSubtotal + delivery - discountTotal;
   const nutrition = {
     kcal: burger.kcal + side.kcal + DEMO.drink.kcal,
     protein: burger.protein + side.protein + DEMO.drink.protein,
     fat: burger.fat + side.fat + DEMO.drink.fat,
     carb: burger.carb + side.carb + DEMO.drink.carb
   };
-  return { people, burger, side, burgerSubtotal, sideSubtotal, drinkSubtotal, foodSubtotal, delivery, burgerDiscount, sideDiscount, drinkDiscount, deliveryDiscount, total, nutrition };
+  return {
+    name, tagline, burger, side, nutrition, total, discountTotal, foodSubtotal, delivery,
+    items: burger.name + " ×" + people + " + " + side.name + " ×" + people + " + " + DEMO.drink.name + " ×" + people
+  };
+}
+
+function buildPlans() {
+  return [
+    planFrom("稳稳过线", "主食+小食+饮料，一餐补齐", selectedBurger(), selectedSide()),
+    planFrom("你的常点", "MCP 标记「我的常点」路线", DEMO.burgers[1], DEMO.friesSide),
+    planFrom("薅券流", "把今晚到期的券全用掉", DEMO.burgers[2], DEMO.chickenSide)
+  ];
 }
 
 function money(value) {
@@ -847,45 +917,72 @@ function money(value) {
 }
 
 function showForge() {
-  if (["forge", "order-confirm", "finished"].includes(state.stage)) return;
+  if (["forge", "plan", "order-preview", "finished"].includes(state.stage)) return;
   state.stage = "forge";
   addUser("进入终局锻造");
-  const bill = buildPrice();
-  state.order = bill;
   const budget = budgetTotal();
-  const overBudget = bill.total > budget;
-  const room = overBudget ? "预算编译失败：超出 ¥" + (bill.total - budget).toFixed(2) : "预算编译通过";
-  const burgerDiscount = bill.burgerDiscount ? "汉堡 -" + money(bill.burgerDiscount) : "汉堡无可用券";
-  const sideDiscount = bill.sideDiscount ? "琵琶腿半价 -" + money(bill.sideDiscount) : "小食无可用券";
-  const drinkDiscount = bill.drinkDiscount ? "抽奖券 -" + money(bill.drinkDiscount) : "饮料无兑换券";
-  const deliveryDiscount = bill.deliveryDiscount ? "免配送费 -" + money(bill.deliveryDiscount) : "配送费照常计算";
-  const perPerson = bill.total / bill.people;
-  const composition = bill.burger.name + " ×" + bill.people + "、" + bill.side.name + " ×" + bill.people + "、" + DEMO.drink.name + " ×" + bill.people;
-  const details = "商品（示例数据）：" + composition + "\n餐品小计 " + money(bill.foodSubtotal) + " + 配送 " + money(bill.delivery) + "\n优惠：" + [burgerDiscount, sideDiscount, drinkDiscount, deliveryDiscount].join("｜") + "\n应付 " + money(bill.total) + "（人均 " + money(perPerson) + "）｜" + room + "\n每人营养：" + bill.nutrition.kcal + " kcal · 蛋白质 " + bill.nutrition.protein + "g · 脂肪 " + bill.nutrition.fat + "g · 碳水 " + bill.nutrition.carb + "g\n配送示例：科技园 3 期 A 座 · 中关村南路店";
-  const bubble = addAssistant("🔔 累计行进 " + state.steps + " 格，终局 Boss「" + state.boss.name + "」挡住出口！" + state.boss.intro + "\n战利品是「" + (state.loot.length ? state.loot.join("、") : "路线徽章 ×0") + "」，HP " + state.hp + "/100。终极锻造账单：\n" + details + "\n" + (overBudget ? "超出预算，Boss 还剩一格血；可以先带走方案，或重新开局换个构筑。" : "剩余预算 " + money(budget - bill.total) + "，Boss 已倒地。"), "forge");
-  const actions = [
-    { label: "确认生成订单回执", run: confirmOrder, kind: "primary" },
-    { label: "只看方案", run: skipOrder, kind: "quiet" }
-  ];
-  if (overBudget) actions.push({ label: "🎲 重新开局", run: resetRun, kind: "quiet" });
-  addActions(bubble, actions);
-  state.stage = "order-confirm";
+  state.plans = buildPlans();
+  const marks = ["🥇 方案A", "🥈 方案B", "🥉 方案C"];
+  const lines = state.plans.map((p, i) => {
+    const budgetNote = p.total <= budget ? "✓ 预算内" : "✗ 超预算 ¥" + (p.total - budget).toFixed(2);
+    return marks[i] + "「" + p.name + "」（" + p.tagline + "）\n   " + p.items + "\n   实付 " + money(p.total) + " ｜ 原价 " + money(p.foodSubtotal + p.delivery) + " ｜ 优惠 " + money(p.discountTotal) + " ｜ " + budgetNote + "\n   营养（每人）：" + p.nutrition.kcal + " kcal · 蛋白 " + p.nutrition.protein + "g · 脂肪 " + p.nutrition.fat + "g · 碳水 " + p.nutrition.carb + "g";
+  }).join("\n\n");
+  const bubble = addAssistant("⚔️ 终局：Boss「" + state.boss.name + "」· 血条 ¥" + budget + "\n" + state.boss.intro + "巨龙吐出一句 if (totalPrice <= budget) { win(); } —— 三套构筑已锻造完毕：\n\n" + lines + "\n\n两点如实说明：\n· 以上均为示例数据；真实 Skill 会用 MCP 实时价格逐项核价。\n· 所有价格、优惠、营养均标注来源，HP 只是游戏数值。", "forge");
+  addActions(bubble, [
+    { label: "下单 方案A", run: () => confirmPlan(0), kind: "primary" },
+    { label: "下单 方案B", run: () => confirmPlan(1) },
+    { label: "下单 方案C", run: () => confirmPlan(2) },
+    { label: "只要方案", run: skipOrder, kind: "quiet" }
+  ]);
+  state.stage = "plan";
 }
 
-function confirmOrder() {
-  if (state.stage !== "order-confirm") return;
-  addUser("确认生成订单回执");
-  const orderId = "#MCD-" + new Date().toISOString().slice(0, 10).replaceAll("-", "") + "-" + String(Math.floor(1000 + Math.random() * 9000));
+function orderPreviewText(p) {
+  return "Order Preview （示例数据）\n"
+    + "────────────────────────────────\n"
+    + padName("门店", 8) + "示例门店 · 人民广场店（示例）\n"
+    + padName("编号", 8) + "#MCD-" + new Date().toISOString().slice(0, 10).replaceAll("-", "") + "-0000（示例）\n"
+    + padName("方式", 8) + "到店自取 ← 待你确认：堂食 / 外带\n"
+    + padName("商品", 8) + p.items + "\n"
+    + padName("原价", 8) + money(p.foodSubtotal + p.delivery) + "\n"
+    + padName("优惠", 8) + "-" + money(p.discountTotal) + "\n"
+    + padName("配送费", 8) + money(p.delivery) + "\n"
+    + "────────────────────────────────\n"
+    + padName("应付", 8) + money(p.total) + "\n"
+    + padName("营养", 8) + p.nutrition.kcal + " kcal · 蛋白" + p.nutrition.protein + "g · 脂肪" + p.nutrition.fat + "g · 碳水" + p.nutrition.carb + "g  [游戏HP " + state.hp + "]";
+}
+
+function confirmPlan(index) {
+  if (state.stage !== "plan") return;
+  state.chosen = state.plans[index];
+  state.stage = "order-preview";
+  addUser("下单 方案" + "ABC"[index]);
+  const p = state.chosen;
+  const bubble = addAssistant("🧾 " + state.boss.name + "最后一击 —— 方案" + "ABC"[index] + "「" + p.name + "」账单已生成，请过目核对：", "order");
+  addArtBlock(bubble, orderPreviewText(p));
+  addText(bubble, "下单前还差两项确认：\n1. 取餐方式：「堂食」还是「外带」？\n2. 是否要餐具：需要 / 不需要？\n回一句「外带，不需要餐具，确认下单」我就发起订单。订单创建后状态是待支付，由你自己去官方页面扫码付款——我不会代付、也不会声称已付款。", "message-text");
+  addActions(bubble, [
+    { label: "外带，不需要餐具，确认下单", run: () => finalOrder("外带 · 不需要餐具"), kind: "primary" },
+    { label: "堂食，需要餐具，确认下单", run: () => finalOrder("堂食 · 需要餐具") },
+    { label: "再想想", run: skipOrder, kind: "quiet" }
+  ]);
+}
+
+function finalOrder(mode) {
+  if (state.stage !== "order-preview") return;
+  addUser(mode + "，确认下单");
   state.stage = "finished";
-  const bubble = addAssistant("🎉 通关成功！订单回执已生成。\n订单号 " + orderId + " · 待支付\n应付 " + money(state.order.total) + " · 配送至科技园 3 期 A 座（示例地址）\n冒险者带着 HP " + state.hp + "/100 和 " + state.loot.length + " 件战利品通关。这只是模拟回执：真实 Skill 会展示 MCP 返回的订单与支付链接，支付由你在官方页面完成，本页不会真的扣款。", "order");
+  const p = state.chosen;
+  const orderId = "#MCD-" + new Date().toISOString().slice(0, 10).replaceAll("-", "") + "-" + String(Math.floor(1000 + Math.random() * 9000));
+  const bubble = addAssistant("🎉 通关成功！订单回执已生成（示例数据）。\n订单号 " + orderId + " · 待支付\n应付 " + money(p.total) + " · " + mode + "\n冒险者带着 HP " + state.hp + "/100 和 " + state.loot.length + " 件战利品通关。\n模拟回执说明：真实 Skill 创建订单后由你在官方页面完成支付，我不会代付、也不会声称已付款。", "order");
   addActions(bubble, [{ label: "再开一局", run: resetRun, kind: "primary" }]);
 }
 
 function skipOrder() {
-  if (state.stage !== "order-confirm") return;
-  addUser("只看方案");
+  if (!["plan", "order-preview"].includes(state.stage)) return;
+  addUser("只要方案");
   state.stage = "finished";
-  const bubble = addAssistant("🏁 你把套餐方案收入背包，暂时不下单。" + state.boss.name + "退回地牢，等下一局再来挑战。", "finish");
+  const bubble = addAssistant("🏁 你把方案收入背包，暂不下单。" + state.boss.name + "退回地牢，等下一局再来挑战。", "finish");
   addActions(bubble, [{ label: "再开一局", run: resetRun, kind: "primary" }]);
 }
 
@@ -902,6 +999,8 @@ function resetRun() {
   state.drinkVoucher = false;
   state.loot = [];
   state.order = null;
+  state.plans = [];
+  state.chosen = null;
   state.bags = {};
   setSuggestions([]);
   greet();
@@ -932,7 +1031,7 @@ function handleMessage(raw) {
       if (!p.budget) missing.push("总预算或人均预算");
       if (!p.food) missing.push("想吃什么（或说随便）");
       if (!p.people) missing.push("几个人");
-      const bubble = addAssistant("收到。还差「" + missing.join("、") + "」；补上这些参数，地图就能生成。比如：总预算 80 元，鸡肉，2 个人。", "help");
+      addAssistant("收到。还差「" + missing.join("、") + "」；补上这些参数，地图就能生成。比如：总预算 80 元，鸡肉，2 个人。", "help");
       return;
     }
     if (p.people < 1 || p.people > 20 || p.budget <= 0) {
@@ -945,13 +1044,23 @@ function handleMessage(raw) {
   if (state.stage === "lottery" && /跳过|不用|算了/.test(text)) return skipLottery();
   if (state.stage === "lottery" && /虚拟|游戏|试试手气/.test(text)) return playVirtualLottery();
   if (state.stage === "lottery" && /积分|真实/.test(text)) return playPointLottery();
-  if (state.stage === "order-confirm" && /不下单|只看|跳过|再想想|考虑/.test(text)) return skipOrder();
-  if (state.stage === "order-confirm" && /确认|下单|出单/.test(text)) return confirmOrder();
+  if (state.stage === "plan") {
+    if (/只要|只看|带走方案/.test(text)) return skipOrder();
+    if (/稳稳|方案A|A方案|^A$/i.test(text)) return confirmPlan(0);
+    if (/常点|方案B|B方案|^B$/i.test(text)) return confirmPlan(1);
+    if (/薅券|方案C|C方案|^C$/i.test(text)) return confirmPlan(2);
+  }
+  if (state.stage === "order-preview") {
+    if (/再想想|取消|不下单|考虑/.test(text)) return skipOrder();
+    if (/确认下单|确认|下单/.test(text)) {
+      const mode = /堂食/.test(text) ? "堂食 · " + (/餐具/.test(text) ? "需要餐具" : "默认餐具") : (/外带/.test(text) ? "外带 · " + (/不要餐具|不需要餐具/.test(text) ? "不需要餐具" : "默认餐具") : "按你确认的方式");
+      return finalOrder(mode);
+    }
+  }
   if (state.stage === "finished" && /再开|再来|重新|下一局/.test(text)) return resetRun();
   addUser(text);
   replyFallback();
 }
-
 composer.addEventListener("submit", (event) => {
   event.preventDefault();
   const value = input.value;
