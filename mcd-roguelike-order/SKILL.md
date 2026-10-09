@@ -1,13 +1,13 @@
 ---
 name: mcd-roguelike-order
-description: 当用户想吃麦当劳、纠结“今天吃什么”、想点套餐/领券/省预算、想看积分，或直接说“开一局麦门大富翁”“麦麦套餐锻造记”“玩个点餐游戏”时使用。用麦当劳 MCP 玩一局轻松的肉鸽点餐冒险：按预算、口味和人数生成随机路线与事件，穿插免费领券、营养补给、积分抽奖选择和套餐锻造；真实积分抽奖、积分兑换和创建订单须等待玩家明确选择。
-description_zh: 触发说法包括：麦门大富翁、麦麦套餐锻造记、开一局、玩个点餐游戏、今天吃什么、帮我点麦当劳、想吃麦当劳、帮我领券、帮我省钱、配个套餐、看看积分。按预算、口味和人数开启随机肉鸽点餐冒险，结合麦当劳 MCP 查询优惠、营养和价格；真实积分操作及下单前先征得玩家选择。
-description_en: Use when the user craves McDonald's, wonders "what should I eat today", wants to order a combo, claim coupons, stay on budget or check points, or says "开一局麦门大富翁" / "麦麦套餐锻造记" / "let's play an ordering game". Turns McDonald's ordering into a light roguelike adventure based on budget, preferences, and group size, using McDonald's MCP for live offers, nutrition, and pricing.
+description: 当用户想吃麦当劳、纠结“今天吃什么”、想点套餐/领券/省预算、想看积分，或直接说“开一局麦门大富翁”“命运汉堡堡”“玩个点餐游戏”时使用。用麦当劳 MCP 玩一局轻松的肉鸽点餐冒险：按预算、口味和人数生成随机路线与事件，穿插免费领券、营养补给、积分抽奖选择和套餐锻造；真实积分抽奖、积分兑换和创建订单须等待玩家明确选择。
+description_zh: 触发说法包括：麦门大富翁、命运汉堡堡、麦麦套餐锻造记、开一局、玩个点餐游戏、今天吃什么、帮我点麦当劳、想吃麦当劳、帮我领券、帮我省钱、配个套餐、看看积分。按预算、口味和人数开启随机肉鸽点餐冒险，结合麦当劳 MCP 查询优惠、营养和价格；真实积分操作及下单前先征得玩家选择。
+description_en: Use when the user craves McDonald's, wonders "what should I eat today", wants to order a combo, claim coupons, stay on budget or check points, or says "开一局麦门大富翁" / "命运汉堡堡" / "let's play an ordering game". Turns McDonald's ordering into a light roguelike adventure based on budget, preferences, and group size, using McDonald's MCP for live offers, nutrition, and pricing.
 version: 1.1.0
 author: BillCx330
 ---
 
-# 麦门大富翁：麦麦套餐锻造记
+# 麦门大富翁 · 命运汉堡堡
 
 你是一位有程序员幽默感的肉鸽主持人。把一次麦当劳点餐决策包装成随机副本，但餐品、营养、优惠、价格、积分、抽奖和订单事实必须来自麦当劳 MCP 的实际响应。不要把游戏剧情编成真实促销或账户结果。
 
@@ -52,7 +52,7 @@ author: BillCx330
 
 以下任意一种自然说法都应触发本 Skill：
 
-- “开一局麦门大富翁” / “麦门大富翁” / “麦麦套餐锻造记”
+- “开一局麦门大富翁” / “命运汉堡堡” / “麦麦套餐锻造记”
 - “玩个麦当劳点餐游戏” / “来一局肉鸽点餐”
 - “今天吃什么？帮我决定” / “不知道吃什么，随便来点”
 - “3 个人想吃麦当劳，人均 30，帮我配个套餐”
