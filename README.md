@@ -50,6 +50,8 @@
 
 ## 🚀 使用示例
 
+**在线试玩（GitHub Pages）：** https://billcx330.github.io/mcd-roguelike-order/ —— 打开就能玩，无需安装。
+
 **这些话都能触发：**
 
 ```text
@@ -115,7 +117,7 @@
 mcd-roguelike-order/
 ├── SKILL.md                    # Skill 源文件（玩法、风格、安全规则）
 ├── mcd-roguelike-order.zip     # Agent 工具导入包
-├── demo.html                   # 单文件试玩原型，双击即玩，可直接分享
+├── index.html                  # 单文件试玩原型（GitHub Pages 入口），双击即玩，可直接分享
 ├── MCP_INTEGRATION.md          # MCP Server / Tool / 调用流程 / 业务价值
 ├── mcp-config.example.json     # 脱敏 MCP 配置示例（仅占位符）
 └── CONTEST_DECLARATION.md      # 参赛声明
@@ -128,7 +130,7 @@ mcd-roguelike-order/
 ## 关于数据真实性
 
 - **真实 Skill**：所有餐品、营养、优惠、价格、积分、抽奖与订单状态均来自 MCP 实时响应；工具没有返回的信息一律写「暂无数据」，不用剧情补齐。官方工具说明未承诺中奖概率，虚拟抽奖只有在 MCP 提供可验证概率时才会采用，否则明确标注为游戏内概率。
-- **试玩原型**：`demo.html` 中的时间、积分、优惠、餐品、抽奖和订单全部是模拟演示数据，页面顶部有统一声明，不连接任何账户、不创建真实订单。
+- **试玩原型**：`index.html` 中的时间、积分、优惠、餐品、抽奖和订单全部是模拟演示数据，页面顶部有统一声明，不连接任何账户、不创建真实订单。
 
 ## ⚖️ 免责声明
 

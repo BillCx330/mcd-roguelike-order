@@ -51,4 +51,4 @@ Token 由用户在自己的 MCP 客户端中配置。本项目不收集、保存
 
 ## 原型与真实调用边界
 
-`demo.html` 是本地模拟试玩，不连接 MCP Server。真实工具调用由已配置 MCP Server 的兼容 AI 客户端按照 `SKILL.md` 执行。网页原型中的结果均为虚构演示数据。
+`index.html` 是本地模拟试玩，不连接 MCP Server。真实工具调用由已配置 MCP Server 的兼容 AI 客户端按照 `SKILL.md` 执行。网页原型中的结果均为虚构演示数据。
